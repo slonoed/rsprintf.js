@@ -1,6 +1,7 @@
 var assert = require("assert"),
     sprintfjs = require("../src/sprintf.js"),
     sprintf = sprintfjs.sprintf,
+    rsprintf = sprintfjs.rsprintf,
     vsprintf = sprintfjs.vsprintf
 
 describe("sprintfjs", function() {
@@ -103,5 +104,11 @@ describe("sprintfjs", function() {
     it("should return formated strings for callbacks", function() {
         assert.equal("foobar", sprintf("%s", function() { return "foobar" }))
         assert.equal(Date.now(), sprintf("%s", Date.now)) // should pass...
+    })
+
+    describe("rsprintf", function() {
+        it("should rerurn correct array for strng with %r", function() {
+            assert.equal(["a", { o: 1 },"b"], rsprintf("a %r b", { o: 1 }))
+        })
     })
 })

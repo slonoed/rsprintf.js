@@ -10,7 +10,7 @@
         not_json: /[^j]/,
         text: /^[^\x25]+/,
         modulo: /^\x25{2}/,
-        placeholder: /^\x25(?:([1-9]\d*)\$|\(([^\)]+)\))?(\+)?(0|'[^$])?(-)?(\d+)?(?:\.(\d+))?([b-gijostTuvxX])/,
+        placeholder: /^\x25(?:([1-9]\d*)\$|\(([^\)]+)\))?(\+)?(0|'[^$])?(-)?(\d+)?(?:\.(\d+))?([b-gijorstTuvxX])/,
         key: /^([a-z_][a-z_\d]*)/i,
         key_access: /^\.([a-z_][a-z_\d]*)/i,
         index_access: /^\[(\d+)\]/,
@@ -24,8 +24,15 @@
         }
         return sprintf.format.call(null, cache[key], arguments)
     }
+    function rsprintf() {
+        var key = arguments[0], cache = sprintf.cache
+        if (!(cache[key] && cache.hasOwnProperty(key))) {
+            cache[key] = sprintf.parse(key)
+        }
+        return sprintf.format.call(null, cache[key], arguments, true)
+    }
 
-    sprintf.format = function(parse_tree, argv) {
+    sprintf.format = function(parse_tree, argv, output_array) {
         var cursor = 1, tree_length = parse_tree.length, node_type = '', arg, output = [], i, k, match, pad, pad_character, pad_length, is_positive = true, sign = ''
         for (i = 0; i < tree_length; i++) {
             node_type = get_type(parse_tree[i])
@@ -88,6 +95,9 @@
                     case 'o':
                         arg = arg.toString(8)
                     break
+                    case 'r':
+                        arg = arg
+                    break
                     case 's':
                         arg = String(arg)
                         arg = (match[7] ? arg.substring(0, match[7]) : arg)
@@ -128,11 +138,16 @@
                     pad_character = match[4] ? match[4] === '0' ? '0' : match[4].charAt(1) : ' '
                     pad_length = match[6] - (sign + arg).length
                     pad = match[6] ? (pad_length > 0 ? str_repeat(pad_character, pad_length) : '') : ''
-                    output[output.length] = match[5] ? sign + arg + pad : (pad_character === '0' ? sign + pad + arg : pad + sign + arg)
+                    if (output_array) {
+                      output[output.length] = match[5] ? [sign, arg, pad] : (pad_character === '0' ? [sign, pad, arg] : [pad, sign, arg])
+                    }
+                    else {
+                      output[output.length] = match[5] ? sign + arg + pad : (pad_character === '0' ? sign + pad + arg : pad + sign + arg)
+                    }
                 }
             }
         }
-        return output.join('')
+        return output_array ? compact(output) : output.join('');
     }
 
     sprintf.cache = {}
@@ -218,21 +233,31 @@
         return Array(multiplier + 1).join(input)
     }
 
+
+    function compact(input) {
+        return ({}).toString.call(input) === "[object Array]" ?
+          input.filter(function (a) { return a }) :
+          input
+    }
+
     /**
      * export to either browser or node.js
      */
     if (typeof exports !== 'undefined') {
         exports.sprintf = sprintf
         exports.vsprintf = vsprintf
+        exports.rsprintf = rsprintf
     }
     else {
         window.sprintf = sprintf
         window.vsprintf = vsprintf
+        window.rsprintf = rsprintf
 
         if (typeof define === 'function' && define.amd) {
             define(function() {
                 return {
                     sprintf: sprintf,
+                    rsprintf: rsprintf,
                     vsprintf: vsprintf
                 }
             })
